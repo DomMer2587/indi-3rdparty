@@ -412,8 +412,8 @@ bool LX200StarGo::initProperties()
                      60, IPS_OK);
 
     // Guiding settings
-    IUFillNumber(&GuidingSpeedP[0], "GUIDE_RATE_WE", "RA Speed", "%.2f", 0.0, 2.0, 0.1, 0);
-    IUFillNumber(&GuidingSpeedP[1], "GUIDE_RATE_NS", "DEC Speed", "%.2f", 0.0, 2.0, 0.1, 0);
+    IUFillNumber(&GuidingSpeedP[0], "GUIDE_RATE_WE", "RA Speed", "%.2f", 0.0, 0.99, 0.1, 0);
+    IUFillNumber(&GuidingSpeedP[1], "GUIDE_RATE_NS", "DEC Speed", "%.2f", 0.0, 0.99, 0.1, 0);
     IUFillNumberVector(&GuidingSpeedNP, GuidingSpeedP, 2, getDeviceName(), "GUIDE_RATE", "Autoguiding", RA_DEC_TAB, IP_RW, 60,
                        IPS_IDLE);
 
@@ -1665,7 +1665,7 @@ bool LX200StarGo::setGuidingSpeeds (int raSpeed, int decSpeed)
     char cmd[AVALON_COMMAND_BUFFER_LENGTH];
     char response[AVALON_RESPONSE_BUFFER_LENGTH] = {0};
 
-    sprintf(cmd, ":X20%2d#", raSpeed);
+    sprintf(cmd, ":X20%02d#", raSpeed);
     if (sendQuery(cmd, response, 0)) // No response from mount
     {
         LOGF_INFO("Setting RA speed to %2d%%.", raSpeed);
@@ -1679,7 +1679,7 @@ bool LX200StarGo::setGuidingSpeeds (int raSpeed, int decSpeed)
     // sleep for 100 mseconds
     nanosleep(&timeout, nullptr);
 
-    sprintf(cmd, ":X21%2d#", decSpeed);
+    sprintf(cmd, ":X21%02d#", decSpeed);
     if (sendQuery(cmd, response, 0))  // No response from mount
     {
         LOGF_INFO("Setting DEC speed to %2d%%.", decSpeed);
@@ -2417,6 +2417,10 @@ int LX200StarGo::SendPulseCmd(int8_t direction, uint32_t duration_msec)
         LOGF_INFO("Pulse command (dir=%d dur=%d ms) ingnored due to track state %d.", direction, duration_msec, TrackState);
         return 1;
     }
+    // The duration has four digits; a longer pulse would produce an invalid command.
+    if (duration_msec > 9999)
+        duration_msec = 9999;
+
     char cmd[AVALON_COMMAND_BUFFER_LENGTH];
     char response[AVALON_RESPONSE_BUFFER_LENGTH];
     switch (direction)
@@ -2658,7 +2662,7 @@ bool LX200StarGo::Abort()
         if (GuideWETID)
         {
             IERmTimer(GuideWETID);
-            GuideNSTID = 0;
+            GuideWETID = 0;
         }
 
         LOG_INFO("Guide aborted.");
@@ -2884,8 +2888,8 @@ void LX200StarGo::TimerHit()
         auto start = raPulsesList.begin();
         auto end = raPulsesList.end();
         // skip first and last 10%
-        start.operator++(delta);
-        end.operator--(delta);
+        std::advance(start, delta);
+        std::advance(end, -delta);
 
         // take the average value of the pulses, cutting off 10% min and max values
         int average = accumulate(start, end, 0) / (n - 2 * delta);
