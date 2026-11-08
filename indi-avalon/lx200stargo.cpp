@@ -1469,7 +1469,7 @@ bool LX200StarGo::getParkHomeStatus (char* status)
 
     LOGF_DEBUG("%s: response: %s", __FUNCTION__, response);
 
-    if (! sscanf(response, "p%1[012AB]", status))
+    if (sscanf(response, "p%1[012AB]", status) < 1)
     {
         LOGF_ERROR("Unexpected park home status response '%s'.", response);
         return false;
@@ -1498,7 +1498,7 @@ bool LX200StarGo::getST4Status (bool *isEnabled)
         return false;
     }
     int answer = 0;
-    if (! sscanf(response, "vh%01d", &answer))
+    if (sscanf(response, "vh%01d", &answer) < 1)
     {
         LOGF_ERROR("Unexpected ST4 status response '%s'.", response);
         return false;
@@ -1528,7 +1528,7 @@ bool LX200StarGo::getKeypadStatus (bool *isEnabled)
         return false;
     }
     int answer = 0;
-    if (! sscanf(response, "vr%01d", &answer))
+    if (sscanf(response, "vr%01d", &answer) < 1)
     {
         LOGF_ERROR("Unexpected Keypad status response '%s'.", response);
         return false;
@@ -1558,7 +1558,7 @@ bool LX200StarGo::getSystemSlewSpeedMode (int *index)
         return false;
     }
     int xx = 0, yy = 0;
-    if (! sscanf(response, "%02da%02d", &xx, &yy))
+    if (sscanf(response, "%02da%02d", &xx, &yy) < 2)
     {
         LOGF_ERROR("Unexpected system slew speed status response '%s'.", response);
         return false;
@@ -1641,7 +1641,7 @@ bool LX200StarGo::getGuidingSpeeds (int *raSpeed, int *decSpeed)
         LOG_ERROR("Failed to send query guiding speeds request.");
         return false;
     }
-    if (! sscanf(response, "%02db%2d", raSpeed, decSpeed))
+    if (sscanf(response, "%02db%2d", raSpeed, decSpeed) < 2)
     {
         LOGF_ERROR("Unexpected guiding speed response '%s'.", response);
         return false;
@@ -1754,7 +1754,7 @@ bool LX200StarGo::syncSideOfPier()
     }
     char answer;
 
-    if (! sscanf(response, "P%c", &answer))
+    if (sscanf(response, "P%c", &answer) < 1)
     {
         LOGF_ERROR("Unexpected query pier side response '%s'.", response);
         return false;
@@ -2151,13 +2151,13 @@ bool LX200StarGo::GetMeridianFlipMode(int* index)
         return false;
     }
     int enable = 0;
-    if (! sscanf(enableresp, "vs%01d", &enable))
+    if (sscanf(enableresp, "vs%01d", &enable) < 1)
     {
         LOGF_ERROR("Invalid meridian flip enabled response '%s", enableresp);
         return false;
     }
     int force = 0;
-    if (! sscanf(forceresp, "vd%01d", &force))
+    if (sscanf(forceresp, "vd%01d", &force) < 1)
     {
         LOGF_ERROR("Invalid meridian flip forced response '%s", forceresp);
         return false;
