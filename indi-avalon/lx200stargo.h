@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include <queue>
 #include <list>
+#include <chrono>
 
 #define LX200_TIMEOUT 5 /* FD timeout in seconds */
 #define RB_MAX_LEN    64
@@ -155,6 +156,11 @@ class LX200StarGo : public LX200Telescope
         INumber MountRequestDelayN[1];
 
         int controller_format { LX200_LONG_FORMAT };
+
+        // GoTo start, to tell a finished slew from one whose motors have not started yet
+        std::chrono::steady_clock::time_point m_SlewRequested;
+        bool m_SlewMotionSeen { false };
+        static constexpr std::chrono::seconds SLEW_START_TIMEOUT { 5 };
 
         // override LX200Generic
         virtual void getBasicData() override;

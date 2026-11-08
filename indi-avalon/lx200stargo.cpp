@@ -559,6 +559,16 @@ bool LX200StarGo::ReadScopeStatus()
 
     INDI::Telescope::TelescopeStatus newTrackState = TrackState;
 
+    // Right after a GoTo the motors may still report tracking or stopped before they start to slew.
+    bool slewStarting = false;
+    if (TrackState == SCOPE_SLEWING)
+    {
+        if (x >= 2 || y >= 2)
+            m_SlewMotionSeen = true;
+        else if (!m_SlewMotionSeen && std::chrono::steady_clock::now() - m_SlewRequested < SLEW_START_TIMEOUT)
+            slewStarting = true;
+    }
+
     // handle parking / unparking
     if(strcmp(parkHomeStatus, "2") == 0)
     {
@@ -572,7 +582,11 @@ bool LX200StarGo::ReadScopeStatus()
             SetParked(false);
 
         // handle tracking state
-        if(x == 0 && y == 0)
+        if (slewStarting)
+        {
+            LOGF_DEBUG("Waiting for the slew to start, motor state = (%d, %d)", x, y);
+        }
+        else if(x == 0 && y == 0)
         {
             newTrackState = SCOPE_IDLE;
             if (TrackState != newTrackState)
@@ -697,6 +711,8 @@ bool LX200StarGo::slewToHome(ISState* states, char* names[], int n)
     if (setMountGotoHome())
     {
         MountGotoHomeSP.s = IPS_BUSY;
+        m_SlewRequested = std::chrono::steady_clock::now();
+        m_SlewMotionSeen = false;
         TrackState = SCOPE_SLEWING;
     }
     else
@@ -2561,8 +2577,17 @@ bool LX200StarGo::Goto(double ra, double dec)
             slewError(0);
             return false;
         }
+        // LX200: 0 = slewing, 1<text> = object below the horizon, 2<text> = object below the higher limit
+        if (response[0] == '1' || response[0] == '2')
+        {
+            LOGF_ERROR("Mount rejected the slew: %s", response[1] ? response + 1 : response);
+            slewError(response[0] - '0');
+            return false;
+        }
     }
 
+    m_SlewRequested = std::chrono::steady_clock::now();
+    m_SlewMotionSeen = false;
     TrackState = SCOPE_SLEWING;
     //EqNP.s     = IPS_BUSY;
 
